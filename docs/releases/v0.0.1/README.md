@@ -1,13 +1,14 @@
 # MileSprint · v0.0.1 设备管理器
 
-- 状态：设计草案，尚未实现。
+- 状态：产品边界与关键规则已确认，尚未实现；技术方案与阶段实施见计划。
 - Milestone：[v0.0.1](https://github.com/ceasarXuu/MileSprint/milestone/1)。
 - 目标：围绕本机 doumen 的现有 Apple 模拟器和 USB 真机，提供无界面的设备登记、状态监测、数据策略与占用管理。
 - 已确认边界：只做约束性管理，不代理实际设备操作；设备设置保护上限，App 数据可单独授权。
+- 已确认规则：租约到期自动释放；App 三档默认使用保护最少的 resettable；Agent 可调用全部管理入口。需要保护现场时显式收紧策略或维持租约。
 
 ## 文档
 
-1. [产品需求与已确认决策](device-manager/prd.md)：版本边界、使用流程、策略和验收草案。
+1. [产品需求与已确认决策](device-manager/prd.md)：版本边界、使用流程、策略和验收标准。
 2. [技术设计与实施计划](device-manager/plan.md)：最小运行形态、数据模型、工具接口、分阶段工作。
 3. [本机与 doumen 调查依据](device-manager/evidence.md)：只读观察、现有流程缺口和官方技术资料。
 

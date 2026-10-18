@@ -2,11 +2,11 @@
 
 - 状态：设计已成稿；代码未开始，当前仅交付设计。
 - Product Authority: [prd.md#confirmed-product-decisions](prd.md#confirmed-product-decisions)
-- Applicable Decisions: PD1, PD2, PD3, PD4, PD5
-- Plan Authoring: blocked-on-user-decision
+- Applicable Decisions: PD1, PD2, PD3, PD4, PD5, PD6, PD7, PD8
+- Plan Authoring: planned
 - Plan validity: valid-with-qualifications
 - Execution Tracking: not-started
-- 下述 Python、存储、接口和默认值是实现建议，不是新增用户授权。
+- Python、存储和接口细节是实现建议；自动到期、默认 resettable、Agent 全管理能力以 PD6–PD8 为准。产品澄清完成不等于已开始或批准代码实施。
 
 ## Execution Contract
 
@@ -42,7 +42,7 @@ flowchart LR
 - `milesprint serve`：前台启动，监听 `127.0.0.1:<可配置端口>/mcp`；CLI 不隐式启动第二个管理实例。
 - `milesprint devices ...` / `milesprint lease ...`：CLI 通过 SDK 调用相同工具；`--json` 提供结构化输出。不复制 REST 业务 API。
 - 首版只交付 Streamable HTTP；不同时实现 stdio 桥。前者适合多个 Agent 连接一个独立进程，见 [官方协议](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)。
-- 普通 Agent 凭据允许查询与租约；建议操作者凭据用于登记、策略修改、恢复。仍处于同一用户信任域，不宣称抵抗可读取本地凭据的 Agent。
+- Agent 与用户 CLI 均可调用全部管理工具，不区分操作者/Agent 角色，不建立工具权限白名单或第二套管理凭据（PD8）。
 - 使用 SDK 的 Host/Origin 校验及本地 bearer 凭据；不监听局域网，不实现 OAuth 平台。凭据与数据库存于用户级本地状态目录，不随 worktree 克隆，不提交仓库。
 - 单实例以同一状态目录的进程锁约束；第二实例必须报错退出。SQLite 事务仍负责跨调用并发一致性。
 - 自动登录启动项和 stdio 兼容桥不进入第一版；先手动运行一个服务，避免额外守护安装与生命周期逻辑。
@@ -58,33 +58,34 @@ flowchart LR
 | `lease_acquire` | `lease acquire <alias>` | 明确设备、holder/task/worktree/branch/SHA、intent、TTL → lease/token 或冲突 |
 | `lease_renew` | `lease renew <id>` | lease/token/TTL → 新到期时间 |
 | `lease_release` | `lease release <id>` | lease/token、外部工作已结束的声明、交接摘要 |
-| `leases_list` | `lease list` | 当前及待恢复占用，不返回 token |
-| `device_register` | `devices register` | 操作者：从候选建立/更新别名、用途、启用状态及核验标识 |
-| `device_policy_set` | `devices policy set` | 操作者：设备上限及明确 App 授权；占用中拒绝更改 |
-| `device_recover` | `devices recover` | 操作者：原因、旧工作已停止的确认，解除待恢复状态 |
+| `leases_list` | `lease list` | 当前租约与 released/expired 历史，不返回 token |
+| `device_register` | `devices register` | 用户或 Agent：从候选建立/更新别名、用途、启用状态及核验标识 |
+| `device_policy_set` | `devices policy set` | 用户或 Agent：设备上限及 App 策略；有效租约期间拒绝更改 |
 
 所有例子是拟议命令，尚不可运行。devices_list/get 不取得租约；policy_check 也不预留资源。真正 acquire 必须在事务内再次检查策略与占用，避免检查后状态变化。
 
 `lease_acquire` 只按明确设备 ID/别名申请，不自动选其他设备，不设置队列，不引入排程算法。容量下限可作为明确请求条件；未要求的指标缺失只报告，不加入拍脑袋的全局阈值。
 
+原候选的 device_recover 和 recovery_required 不再需要，直接移除。到期由服务自动处理，不以恢复入口或人工确认阻塞下一份租约。
+
 ## 3. 持久数据与不变量
 
 | 对象 | 最少字段/约束 |
 | --- | --- |
-| Device | 内部 ID、唯一 alias、kind、typed locators、来源/核验时间、用户能力标签、enabled、policy/revision |
+| Device | 内部 ID、唯一 alias、kind、typed locators、来源/核验时间、能力标签、enabled、policy/revision；App 默认 resettable |
 | Observation | device ID、分项 values/status/source/observed_at、provider/schema version、last error；仅保存当前快照 |
-| Lease | ID、device ID、token hash、holder/context、声明 intent、policy revision、取得/续租/到期时间、host boot ID、终态与交接摘要 |
+| Lease | ID、device ID、token hash、holder/context、声明 intent、policy revision、取得/续租/到期时间、held/released/expired、交接摘要 |
 | Audit | 时间、事件类型、对象、actor、reason、request ID；无原始 token 和业务正文 |
 
 SQLite 保存结构化当前状态和少量必要审计，不建设完整 Event Store。设备占用从 Lease 推导，不再复制一套可独立漂移的 locked 字段。
 
 关键不变量：
 
-1. 对 held/recovery_required 的 lease 建立每 device 唯一的部分索引；acquire 先处理过期，再以写事务检查并插入。
+1. 对 held lease 建立每 device 唯一的部分索引；acquire 在同一写事务内先把到期 lease 标为 expired，再检查占用并插入。后台扫描延迟不得阻止到期后重新申请。
 2. token 是不透明随机能力凭据，只将 hash 存库；续租/释放校验 lease、token 和当前状态。它只防止管理 API 的旧持有者变更新租约，不是物理设备 fencing。
-3. 重复释放同一已释放 lease 可返回终态，不改变后来 lease；重复 acquire 返回冲突，凭据丢失由操作者恢复，不新增幂等事务框架。
+3. 重复释放同一 released/expired lease 只返回其终态，不改变后来 lease；有效期内重复 acquire 返回冲突，凭据丢失可等待自动到期，不新增幂等事务或人工恢复框架。
 4. 所有 mutation 由一个服务写入；CLI 不直接写库。身份映射或策略在占用中不可修改，普通元数据展示不冒充权限提升。
-5. 服务重启不清锁；有效 lease 从库恢复。到期/host 重启/时间异常依 PRD 待确认规则处理，不因 PID 不存在就直接授予新任务。
+5. 服务重启按持久化的 expires_at 判断；有效 lease 保留，过期自动结束，不重置 TTL。旧 token 到期后不可 renew，不能操作新 lease；无需确认旧进程停止。
 6. provider 刷新在事务外进行，过期观察不能伪装为当前就绪；获得 lease 仍不保证后续外部操作成功。
 
 审计只记录登记/策略/租约变更、拒绝、健康状态变化；正常轮询不逐次落日志。首版保留本地审计文件，不主动删除或上传数据；保留期治理留待实测规模需要。
@@ -107,28 +108,30 @@ acquire 若需当前可达性且观察超过 15 秒，先做有界刷新；失�
 
 ## 5. doumen 接入方式
 
-1. 服务扫描后由用户核对实际设备与已有 worktree 配置，登记明确别名；不把历史保留名单自动导入为可用。
+1. 服务扫描后用户或 Agent 核对实际设备与已有 worktree 配置，登记明确别名和设备上限；未单独指定 App 策略时用 resettable，不要求额外人工批准。
 2. Agent 在安装/测试前 acquire；将返回的 `simulator_udid` 或核验后的 `xcode_destination_id/coredevice_identifier` 显式传给原命令。
 3. 原安装脚本继续负责签名、版本、防降级和本地测试 receipt，原测试系统继续负责 fixture/Cloud scope/容量 guard。
-4. Agent 显式续租并在操作结束后 release；人工验收继续占用时交接给 human holder，不伪称释放后无人使用。
+4. Agent 显式续租并在操作结束后 release；人工验收继续占用时交接给 human holder 并维持租约。任何 holder 到期都自动结束占用，不额外保护人工现场。
 5. 首次只做管理接口和只读探测演练，不改 doumen 脚本、不自动跑项目测试。实际安装/测试接入属于另行批准的验证动作。
 
 旧工具没有读取 lease 时无法自动遵守约束。因此本版交付同时包括一页 Agent 使用约定，而不是在本仓库重写 doumen 部署器或注入 shell 拦截器。
 
 ## Pending Product Decisions
 
-| ID | 决策面 | 当前建议 | 为何重要/证据 | 改变后的影响 |
-| --- | --- | --- | --- | --- |
-| Q1 | 租约过期与恢复 | recovery_required，操作者确认旧工作结束才解锁 | 外部工作不受服务控制；不能证明 TTL 到期就安全 | 改自动回收会降低无人值守阻塞，也可能产生双重实际使用 |
-| Q2 | 具体数据分档与初始授权 | PRD 第 6 节的设备上限 + App preserve/owned_only/resettable | PD5 只确认粒度，未批准具体操作集合 | 改动会影响 policy schema、错误语义与验收；实际设备需逐项登记 |
-| Q3 | 管理入口授权方式 | 同一接口、不同逻辑凭据；普通 Agent 不得调策略/恢复入口 | 防误用需要明确边界，同用户不具备强隔离 | 若需要抵抗同用户绕过，则不属于当前最轻量的管理模型 |
+无阻塞产品未决项；原 Q1–Q3 已由用户直接确认，权威记录保存在 PRD，不在本计划维护第二套决策。
+
+| 原问题 | 权威引用 | 对剩余实现的影响 |
+| --- | --- | --- |
+| Q1 到期处理 | PD6 | 自动 expired/解除占用，删除待恢复状态与恢复工具 |
+| Q2 数据分档与默认 | PD5、PD7 | 保留三档，目标 App 缺省 resettable；不按设备类型默认 preserve |
+| Q3 管理入口 | PD8 | Agent 可登记、改策略和操作租约；不做角色鉴权和操作者专用入口 |
 
 ## 6. 实施前的最小验证
 
 | ID | 假设/解锁目标 | 最便宜方法与足够证据 | 预算/隔离与停止点 | 当前状态 |
 | --- | --- | --- | --- | --- |
 | V1 | Apple 工具能提供目录、连接与基本空间 | 本机只读 JSON 和 USB 存储查询成功；不证明可安装/运行 | 本次调查已完成，不做设备变更 | direction-supported |
-| V2 | 一个官方 SDK 进程可支持 CLI/MCP 与逻辑凭据 | 阶段 C 前锁定 SDK 版本；对临时库验证 tools/list/call 和拒绝无权限管理调用 | ≤1 个隔离小样，不接真机；不引入自研协议 | planned |
+| V2 | 一个官方 SDK 进程可支持 CLI/MCP 与本地连接认证 | 阶段 C 前锁定 SDK 版本；对临时库验证 tools/list/call，Agent 可调用全部管理入口 | ≤1 个隔离小样，不接真机；不引入自研协议 | planned |
 | V3 | 并发/重启不产生双租约 | 临时 SQLite、两个客户端和可控时钟；覆盖唯一索引/过期/旧 token | 仅本主题测试；不占现场设备 | planned |
 
 ## 7. 工作单元与阶段
@@ -160,10 +163,10 @@ acquire 若需当前可达性且观察超过 15 秒，先做有界刷新；失�
 
 | 单元 | 位置 / 对象 / 动作 | 结果与 Benefit | Side Effects | 精确验证 / 安全停止 |
 | --- | --- | --- | --- | --- |
-| B1 | src/milesprint/policy.py：按获批 Q2 实现设备上限和 App intent 判定 | 把 PD5 变成可解释的允许/拒绝 | Complexity：有限操作集合与策略 revision；Reach/cost：首次需用户配置设备授权 | preserve/owned_only/越界/未知 scope 表驱动用例；不修改真实设备策略 |
-| B2 | src/milesprint/leases.py、store.py：按获批 Q1 实现事务持有、续租、释放和恢复 | 避免遵守协议的 Agent 双重取得同设备 | Complexity：lease/audit 表、token、恢复状态；Reach/cost：接入者需续租及交接 | V3 并发、旧 token、重启/时间异常测试；到期或异常保留记录，不抢占设备 |
+| B1 | src/milesprint/policy.py：按 PD5/PD7 实现设备上限、App 三档及缺省 resettable | 可解释判定，默认不增加现场保护负担 | Complexity：有限操作集合与策略 revision；Reach/cost：用户或 Agent 可配置保护例外 | 缺省 resettable、显式 preserve/owned_only、越界/未知 scope 表驱动用例；不改变真实设备 |
+| B2 | src/milesprint/leases.py、store.py：按 PD6 实现事务持有、续租、释放和自动到期 | 有效期互斥，到期后立即可重新申请 | Complexity：lease/audit 表与 token，取消恢复状态；Reach/cost：接入者需续租，旧任务可能继续执行 | V3 并发、到期即时重分配、旧 token、重启保留期限测试；保留记录，不杀设备进程 |
 
-阶段出口：核心在临时库 verified；逐项审计新增租约/策略语义。Q1/Q2 未确认则本阶段不开始。
+阶段出口：核心在临时库 verified；逐项审计新增租约/策略语义是否覆盖 PD5–PD7，不重新询问已确认选择。
 
 ### 阶段 C：服务、CLI 与 Agent 工具闭环
 
@@ -175,7 +178,7 @@ acquire 若需当前可达性且观察超过 15 秒，先做有界刷新；失�
 
 | 单元 | 位置 / 对象 / 动作 | 结果与 Benefit | Side Effects | 精确验证 / 安全停止 |
 | --- | --- | --- | --- | --- |
-| C1 | src/milesprint/server.py、cli.py、pyproject.toml：接 SDK、单实例、本地凭据和同源工具调用 | 多 Agent 与用户共用核心，避免入口行为分叉 | Complexity：SDK 依赖、两个薄入口；Reach/cost：一个本地进程/端口与状态目录 | V2 + CLI/MCP 同设备并发、重启和普通凭据越权拒绝；先用临时库/端口 |
+| C1 | src/milesprint/server.py、cli.py、pyproject.toml：接 SDK、单实例、本地连接凭据和同源工具调用 | 多 Agent 与用户共用全部管理能力，避免入口行为分叉 | Complexity：SDK 依赖、两个薄入口，不做角色分层；Reach/cost：一个本地进程/端口与状态目录 | V2 + CLI/MCP 同设备并发、重启、Agent 登记/改策略成功；先用临时库/端口 |
 | C2 | runbooks/device-manager.md：给 doumen 写只读接入和 lease 使用约定 | 现有工具能按协议使用明确设备，不重写部署器 | Complexity：一页说明；Reach/cost：Agent 需先申请再执行，旧脚本仍可绕过 | 获准空闲设备上仅管理 lease 演练；不启动安装测试；停止服务后保留原库 |
 
 阶段出口：仅本版本范围闭环 runtime-verified，交用户验收；不以本主题测试证明 doumen 产品回归通过。
@@ -184,7 +187,12 @@ acquire 若需当前可达性且观察超过 15 秒，先做有界刷新；失�
 
 | Phase | Decision Surface | Implemented / Observed Semantics | Authority Coverage | Classification | Required Action |
 | --- | --- | --- | --- | --- | --- |
-| 设计调查 | 只读现状 | 设备元数据与 doumen 流程证据，无产品实现 | PD1–PD5 仅作为设计约束 | engineering-only | 保持 Draft，先确认 Q1–Q3 |
+| 设计调查 | 只读现状 | 设备元数据与 doumen 流程证据，无产品实现 | PD1–PD5 仅作为设计约束 | engineering-only | 调查完成 |
+| 设计澄清 | 到期、默认保护、管理权限 | 已按用户回答更新设计，无代码实现 | PD6–PD8 | covered | 剩余实施前按本计划执行阶段 rebase |
 | A / B / C | 尚未开始 | 无 | 待各阶段核查 | 未审计 | 每阶段结束填写该阶段实际 delta |
 
-当前无已批准实施计划的 material 变更历史。后续变更记录必须包含 previous plan、current fact、proposed change、impact、具体 user approval；不得用“继续”或 Agent 自评代替批准。
+本次设计变更已获用户对具体产品选择的直接确认；它不是代码实施授权。后续 material 计划变更仍需记录具体事实与批准。
+
+| ID | Before Phase | Previous Plan | Current Fact | Proposed Change | Impact | User Approval | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| DD1 | B/C，均未开始 | 到期待人工恢复；默认保留数据；操作者与 Agent 分权 | 用户明确选择自动释放、最低保护默认和 Agent 全管理能力 | 按 PD6–PD8 更新 lease、policy、工具与验证，移除恢复状态/入口和角色分层 | 降低现场保护与人工恢复负担；接受旧任务冲突；减少实现概念 | user-approved-plan-direct: 2026-10-19 三项具体问答，见 PRD PD6–PD8 | 已应用于设计，未实施 |

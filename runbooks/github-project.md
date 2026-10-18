@@ -5,7 +5,7 @@
 - Project：[milesprint-issues](https://github.com/users/ceasarXuu/projects/6)，归属 `ceasarXuu`，编号 `6`；沿用参考 Project 的私有可见性。
 - 关联仓库：`ceasarXuu/MileSprint`。
 - 按“版本 → 主题（feature / fix）→ issue”组织：Milestone 表示已确认版本，父 issue 表示主题，子 issue 表示具体工作，Labels 标记类型。
-- 当前只有概念讨论材料，无正式版本与 issue。`docs/releases/v0.0.0` 不代表已发布或获批实施版本。
+- 当前已有 [v0.0.1 Milestone](https://github.com/ceasarXuu/MileSprint/milestone/1) 和 [设备管理器主题 issue #1](https://github.com/ceasarXuu/MileSprint/issues/1)，尚无软件实现或正式发布。`docs/releases/v0.0.0` 仅为初始概念归档。
 
 ## 视图与状态
 
