@@ -1,0 +1,13 @@
+# Local OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Future local runtime data (no implementation yet)
+*.log
+*.sqlite
+*.sqlite3
+.env
+.env.*
+!.env.example
