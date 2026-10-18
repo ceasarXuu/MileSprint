@@ -32,6 +32,10 @@ flowchart LR
 
 从 [v0.0.0 初始概念索引](docs/releases/v0.0.0/README.md) 开始阅读。该目录包含产品定义、工作模型、资源模型、优化模型、集成验收、运行时协议、验证实验及决策记录。
 
+## 项目管理
+
+使用 [MileSprint Issue 看板](https://github.com/users/ceasarXuu/projects/6) 按“版本 → 主题（feature / fix）→ issue”组织工作。看板入口、视图配置与维护方法见 [GitHub Project 操作手册](runbooks/github-project.md)。
+
 ## 原则
 
 - **Milestone-first**：Issue 优先级不等于执行优先级；优化完整版本的交付时间。
