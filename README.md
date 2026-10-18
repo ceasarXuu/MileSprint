@@ -32,6 +32,8 @@ flowchart LR
 
 从 [v0.0.0 初始概念索引](docs/releases/v0.0.0/README.md) 开始阅读。该目录包含产品定义、工作模型、资源模型、优化模型、集成验收、运行时协议、验证实验及决策记录。
 
+当前首版设计见 [v0.0.1 设备管理器](docs/releases/v0.0.1/README.md)：以本机 doumen 为标的，仅设计无界面的设备登记、观测、数据策略与租约管理，尚未开始实现。
+
 ## 项目管理
 
 使用 [MileSprint Issue 看板](https://github.com/users/ceasarXuu/projects/6) 按“版本 → 主题（feature / fix）→ issue”组织工作。看板入口、视图配置与维护方法见 [GitHub Project 操作手册](runbooks/github-project.md)。
