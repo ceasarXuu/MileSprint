@@ -1,9 +1,10 @@
-# PRD：v0.0.1 本机设备管理器
+# PRD：MileSprint v0.0.1（设备管理能力）
 
 - Status: Ready for implementation（产品规则已澄清；尚未批准或开始代码实施）
 - Created: 2026-10-19
 - Updated: 2026-10-19
 - Owner / requester: ceasarXuu
+- Product / service name: MileSprint；v0.0.1 仅暴露设备管理相关能力。
 - Source request: 以本机 doumen 为标的，只设计最轻量的无界面设备管理器，为 Agent 提供工具入口。
 - Product Authority: 本文 `Confirmed Product Decisions`，仅 active 行具有用户决策效力。
 
@@ -11,7 +12,7 @@
 
 首版解决“有哪些设备、当前能否使用、允许怎样改变数据、由谁持有、何时释放”。实际启动、安装、测试和清理继续使用现有工具。服务只约束登记、策略和租约，不构成操作系统级设备隔离。
 
-已确认：只做设备管理；无界面且尽量轻；面向本机 doumen；不代理设备操作；设备保护上限与 App 单独授权组合；到期自动释放；App 默认采用三档中保护最少的 resettable；Agent 可调用全部管理入口。
+已确认：产品和服务始终名为 MileSprint，v0.0.1 只暴露设备管理；无界面且尽量轻；面向本机 doumen；不代理设备操作；设备保护上限与 App 单独授权组合；到期自动释放；App 默认采用三档中保护最少的 resettable；Agent 可调用全部管理入口。
 
 不默认保留测试现场，不要求每台测试设备逐项经过人工审批才能使用默认 App 策略。需要保留现场时显式收紧策略或维持租约。技术选型与分阶段实现仍见计划，本次确认不等于开始实施或执行实际设备操作。
 
@@ -166,6 +167,7 @@ stateDiagram-v2
 | PD6 | 租约到期自动释放 | 自动结束占用并允许新申请，保留到期记录 | 等待人工确认旧任务停止或进入待恢复才能重新分配 | 用户接受旧任务可能仍使用设备的冲突风险 | 到期仍阻塞分配等待恢复 | user-confirmed-direct: 2026-10-19「到期自动释放，接受旧任务可能仍在使用的冲突风险」 | active |
 | PD7 | App 保留 preserve/owned_only/resettable 三档，默认保护最少的 resettable | 默认允许在设备上限内重置目标 App 本地沙盒，保护现场显式配置 | 默认 preserve/owned_only、逐项人工审批默认策略或擅自扩成整机擦除 | 测试机通常无需保护现场，默认保护增加负担 | 未单独配置 App 时要求保留现场 | user-confirmed-direct: 2026-10-19「采用你设计的三档，默认采用最低安全保护，不是最高，是最低，测试机大部分时候并不需要保护现场」 | active |
 | PD8 | Agent 可调用全部管理入口 | 登记、策略修改和租约管理均开放给 Agent | 引入操作者专用管理工具或按 Agent 身份限制能力 | 用户直接选择完整管理能力 | 管理工具因 Agent 身份被拒绝 | user-confirmed-direct: 2026-10-19「Agent 可调用全部管理入口」 | active |
+| PD9 | 整个产品和服务名称保持 MileSprint，v0.0.1 仅暴露设备管理能力 | CLI/MCP 服务身份与交付统一归属 MileSprint | 将本版另命名成独立设备管理产品或提前暴露其他能力 | 版本能力切片不改变产品身份 | 服务名变成 DeviceManager 等另一产品名称 | user-confirmed-direct: 2026-10-19「保持整个产品/服务 名称为 MileSprint」「这个版本是只暴露设备管理相关的能力」 | active |
 
 ## 10. Open Questions And Risks
 
@@ -178,4 +180,4 @@ stateDiagram-v2
 
 ## 11. 实现约束
 
-建议形态与技术细节见 [plan.md](plan.md)，不在本 PRD 复制实现决策。产品规则已澄清，PD1–PD8 是后续计划的依据；尚未开始代码实施，技术建议不自动升级为用户决策。
+建议形态与技术细节见 [plan.md](plan.md)，工程接口草案见 [contracts.md](contracts.md)。产品规则已澄清，PD1–PD9 是后续计划的依据；实施前隔离小样不等于正式代码实施，技术建议不自动升级为用户决策。

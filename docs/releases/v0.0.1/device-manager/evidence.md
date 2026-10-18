@@ -1,11 +1,11 @@
-# v0.0.1 调查依据
+# MileSprint v0.0.1 调查依据
 
 - 日期：2026-10-19（Asia/Shanghai）。
 - 方法：本机只读设备枚举、CLI 帮助、宿主机资源查询及 doumen 文档/脚本阅读。
 - 未启动、安装、解锁、重启、擦除、创建或删除设备；未运行构建或测试。
 - 不提交原始 UDID、CoreDevice identifier、设备个人命名或实际设备授权配置。
 
-## 1. 本机快照
+## 1. 首轮本机快照（两台 USB 复核前）
 
 | 观察 | 结果 | 对设计的影响 |
 | --- | --- | --- |
@@ -57,3 +57,51 @@ ideviceinfo -u <已核验的USB设备UDID> -q com.apple.disk_usage -k AmountData
 - [官方 MCP Python SDK](https://py.sdk.modelcontextprotocol.io/) 与 [运行方式](https://py.sdk.modelcontextprotocol.io/run/)：可提供 stdio 或 Streamable HTTP；实施前锁定当时可用的 SDK 版本，不手写 MCP 协议。
 
 这些依据支持技术可行性，不证明本项目已经实现 MCP 服务、持久租约或故障恢复。
+
+## 5. 实施前现场复核：两台 USB 与 DeviceHub
+
+用户在本轮明确产品/服务始终名为 MileSprint，版本仅暴露设备管理能力，并提供两台 USB 真机与已打开的 DeviceHub 供调研。以下新快照替代首轮的当前连接数量；首轮记录作为历史观察保留。
+
+| 项目 | 本轮实测 | 设计影响 |
+| --- | --- | --- |
+| 两台 USB | iPhone 11 Pro Max / iOS 27.2；iPad mini (A17 Pro) / iPadOS 26.6.1，均 wired + connected；idevice_id USB 清单与两台硬件 UDID 对应 | 快速枚举可以与 USB 主源交叉核对，不按名称推断连接 |
+| DeviceHub | Xcode 内 DeviceHub 进程运行；simctl 仍列出 6 台 Shutdown，4 台 runtime 可用、2 台缺 iOS 18.5 runtime | GUI 已打开不表示模拟器已启动；管理器不依赖窗口 |
+| 标识 | 两台的硬件 UDID 与 CoreDevice identifier 均不同 | typed locators 必须区分，不能向部署脚本传同一通用字符串 |
+| 锁状态 | 两台 passcodeRequired=true、unlockedSinceBoot=true；只读取状态，没有解锁 | 连接、锁状态和具体操作能力独立表达 |
+| 详情查询 | iPad 约 131ms 成功；iPhone 5054ms 返回 exit 2 / info.outcome=timeout；其 lockState 仍成功 | details 按需查询，不进入每轮目录扫描；单项失败不覆盖连接观察 |
+| 声明能力 | 两台均声明 installapp/getlockstate；只有 iPad 当前列表包含 applicationcontrol | 只记录 provider 声明，不把该列表或 preparedness 数值当统一 ready |
+| 存储 | iPhone 可用约 164.4GiB，总盘 256GB；iPad 可用约 57.3GiB，总盘 128GB；查询分别约 66/60ms | 可用空间可轻量获取，但这是时点值，不是可承诺配额 |
+| 电量 | iPhone 85%、充电；iPad 100%、外接电源且充满；查询约 33/31ms | 可附带展示，首版不设为申请成功硬条件 |
+| 数据卷 | 6 个模拟器数据目录共用同一文件系统 | 宿主资源不能按设备重复累计 |
+| 快速路径 | simctl 三次约 66–116ms；devicectl 约 63–70ms；USB 枚举约 5–12ms | 15 秒目录轮询具有可行性；这些是小样本，不是 SLA |
+
+两个易误用点已通过现场命令确认：
+
+- devicectl 651.13.5 的 `--timeout 3` 返回 exit 64，要求至少 5 秒；不能将参数错误当设备掉线。
+- ideviceinfo 1.4.0 加 `-s` 读取磁盘/电量域时，两台均 exit 0 但返回空 plist；不加 `-s` 的现有查询方式两台均取得字段。探测必须校验内容。
+
+本轮未拔插 USB、未关闭 DeviceHub、未启停模拟器、未查看屏幕镜像或 App 内容。也未以读取成功证明安装、运行或测试可行。
+
+## 6. SDK、CLI 与租约隔离小样
+
+小样均在独立临时目录中使用合成设备或临时数据库，未修改真实设备、doumen 或 Agent 配置；MCP 临时服务已停止，端口已关闭。结构化结果保存在 [preflight-2026-10-19.json](evidence/preflight-2026-10-19.json)，临时原始脚本不作为正式源码合入。
+
+| 假设 | 实测结果 | 尚未证明 |
+| --- | --- | --- |
+| 官方 SDK 可保持 MileSprint 身份、单进程服务多个调用者 | 固定 mcp==2.3.0，两个客户端同时 list_tools/call_tool，并看到同一组合成设备；身份为 MileSprint | 与本项目 SQLite/真实目录的成品集成 |
+| 兼容 MCP 客户端 | auto 协商 2026-07-28；legacy 2025-11-25，均完成合成调用 | 所有特定 Agent 宿主的配置和行为 |
+| CLI 可复用 SDK | argparse + asyncio + Client 的新进程 CLI 登记/查询成功；无需 mcp[cli] 或 Typer | 完整命令树与实际错误呈现 |
+| 本地入口保护不需要角色系统 | 正确 token 200；缺/错 token 401；非法 Host 421、Origin 403；允许的本地 Origin 200 | 对同 macOS 用户进程的强隔离，本版不承诺 |
+| 结构化业务错误 | 同一合成登记工具，首次成功，再次同名返回 is_error=true 及 code/retryable/details；成功 schema 保持 | 全部实际设备/租约错误路径 |
+| 单设备并发互斥 | 20 轮双独立进程争用，均 1 held / 1 conflict | 断电、损坏与真实 HTTP/SQLite 联动 |
+| 到期/旧 token/重启语义 | 同事务到期重授；旧凭据不改新 lease；终态 release 重试；故障回滚；关库重开保持原期限；同目录 flock 均通过 | 成品进程重启；到期小样使用可控时间，不是长时间现场运行 |
+
+MCP 单次缓存已热的合成成本：TCP 就绪约 191ms，空闲 RSS 约 66.8MiB，新进程 CLI 查询约 273ms，28 个依赖包，venv 分配空间约 33.2MiB。RSS 由 macOS ps 采集，venv 大小不包含外置 Python 解释器/标准库；不含真实探测和 SQLite，不作为性能承诺。
+
+新增一手依据：
+
+- [mcp 2.3.0 发布包](https://pypi.org/project/mcp/2.3.0/) 与 [官方版本发布](https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.3.0)：以固定版本 API 为准，不照搬旧 FastMCP 示例。
+- [SDK 客户端 transport](https://py.sdk.modelcontextprotocol.io/client/transports/)：自定义 header 通过 httpx2 客户端传入；本机连接使用 trust_env=False，避免代理环境改变 loopback 请求路径。
+- [SDK 错误处理](https://py.sdk.modelcontextprotocol.io/servers/handling-errors/) 与 [固定版返回转换源码](https://github.com/modelcontextprotocol/python-sdk/blob/v2.3.0/src/mcp/server/mcpserver/utilities/func_metadata.py)：结构化结果与业务错误契约已有小样支持。
+- [SQLite 事务](https://www.sqlite.org/lang_transaction.html)、[部分索引](https://www.sqlite.org/partialindex.html)：使用写事务和 held 唯一约束，无需额外锁服务。
+- [Python 时钟](https://docs.python.org/3/library/time.html)、[文件锁](https://docs.python.org/3/library/fcntl.html)：跨重启期限用 UTC 毫秒，同目录单实例用 flock，不删除仍在使用的锁文件。

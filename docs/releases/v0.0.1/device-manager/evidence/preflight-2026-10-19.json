@@ -1,0 +1,319 @@
+{
+  "product": "MileSprint",
+  "release_capability_scope": "v0.0.1 devices only",
+  "research_only": true,
+  "generated_at": "2026-10-19T04:08:04.174466+08:00",
+  "observed_on_local_date": "2026-10-19",
+  "timezone": "Asia/Shanghai",
+  "tool_versions": {
+    "xcode": "27.1",
+    "devicectl": "651.13.5",
+    "devicectl_json": 5,
+    "ideviceinfo": "1.4.0",
+    "python": "3.13.14"
+  },
+  "real_device_probes": {
+    "read_only": true,
+    "physical_devices": [
+      {
+        "alias": "usb-ipad-mini",
+        "model": "iPad mini (A17 Pro)",
+        "os_version": "26.6.1",
+        "transport": "usb",
+        "connection": "connected",
+        "usb_identity_crosscheck": true,
+        "hardware_and_coredevice_ids_differ": true,
+        "lock": {
+          "passcodeRequired": true,
+          "unlockedSinceBoot": true
+        },
+        "disk": {
+          "AmountDataAvailable": 61573181440,
+          "TotalDiskCapacity": 128000000000
+        },
+        "battery": {
+          "BatteryCurrentCapacity": 100,
+          "BatteryIsCharging": false,
+          "ExternalConnected": true,
+          "FullyCharged": true
+        },
+        "advertised_features": {
+          "installapp": true,
+          "applicationcontrol": true
+        },
+        "details_probe": {
+          "outcome": "success",
+          "elapsed_ms": 131
+        }
+      },
+      {
+        "alias": "usb-iphone-11-pro-max",
+        "model": "iPhone 11 Pro Max",
+        "os_version": "27.2",
+        "transport": "usb",
+        "connection": "connected",
+        "usb_identity_crosscheck": true,
+        "hardware_and_coredevice_ids_differ": true,
+        "lock": {
+          "passcodeRequired": true,
+          "unlockedSinceBoot": true
+        },
+        "disk": {
+          "AmountDataAvailable": 176511352832,
+          "TotalDiskCapacity": 256000000000
+        },
+        "battery": {
+          "BatteryCurrentCapacity": 85,
+          "BatteryIsCharging": true,
+          "ExternalConnected": true,
+          "FullyCharged": false
+        },
+        "advertised_features": {
+          "installapp": true,
+          "applicationcontrol": false
+        },
+        "details_probe": {
+          "outcome": "timeout",
+          "exit_code": 2,
+          "elapsed_ms": 5054
+        }
+      }
+    ],
+    "simulators": {
+      "total": 6,
+      "runtime_available": 4,
+      "booted": 0,
+      "missing_runtime": 2,
+      "available_runtime_versions": [
+        "17.5",
+        "26.5"
+      ],
+      "shared_data_volume_count": 1
+    },
+    "devicehub_process_running": true,
+    "directory_latency_samples_ms": {
+      "simctl": [
+        116,
+        66,
+        66
+      ],
+      "devicectl": [
+        70,
+        70,
+        63
+      ],
+      "idevice_id": [
+        12,
+        5,
+        5
+      ]
+    },
+    "validated_edge_cases": {
+      "devicectl_timeout_min_seconds": 5,
+      "timeout_3_exit_code": 64,
+      "ideviceinfo_simple_mode_empty_plist_despite_exit_0": true
+    }
+  },
+  "mcp_transport_spike": {
+    "mcp": "2.3.0",
+    "transport": "Streamable HTTP",
+    "bind": "127.0.0.1",
+    "clients": [
+      {
+        "client": "synthetic-a",
+        "mode": "auto",
+        "identity": "MileSprint",
+        "version": "0.0.1-preflight",
+        "protocol": "2026-07-28",
+        "tools": [
+          "device_list",
+          "device_register"
+        ],
+        "registered": {
+          "alias": "synthetic-a",
+          "synthetic": true
+        },
+        "seen": {
+          "devices": [
+            {
+              "alias": "synthetic-a",
+              "synthetic": true
+            },
+            {
+              "alias": "synthetic-b",
+              "synthetic": true
+            }
+          ]
+        }
+      },
+      {
+        "client": "synthetic-b",
+        "mode": "legacy",
+        "identity": "MileSprint",
+        "version": "0.0.1-preflight",
+        "protocol": "2025-11-25",
+        "tools": [
+          "device_list",
+          "device_register"
+        ],
+        "registered": {
+          "alias": "synthetic-b",
+          "synthetic": true
+        },
+        "seen": {
+          "devices": [
+            {
+              "alias": "synthetic-a",
+              "synthetic": true
+            },
+            {
+              "alias": "synthetic-b",
+              "synthetic": true
+            }
+          ]
+        }
+      }
+    ],
+    "http_checks": {
+      "valid": 200,
+      "invalid_host": 421,
+      "invalid_origin": 403,
+      "allowed_origin": 200,
+      "no_token": 401,
+      "bad_token": 401
+    },
+    "cli_register": {
+      "alias": "synthetic-cli",
+      "synthetic": true
+    },
+    "cli_list": {
+      "devices": [
+        {
+          "alias": "synthetic-a",
+          "synthetic": true
+        },
+        {
+          "alias": "synthetic-b",
+          "synthetic": true
+        },
+        {
+          "alias": "synthetic-cli",
+          "synthetic": true
+        }
+      ]
+    },
+    "shutdown": {
+      "exit_code": -15,
+      "port_closed": true
+    }
+  },
+  "mcp_structured_error_spike": {
+    "identity": "MileSprint",
+    "protocol": "2026-07-28",
+    "output_schema": {
+      "properties": {
+        "alias": {
+          "title": "Alias",
+          "type": "string"
+        },
+        "synthetic": {
+          "default": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "alias"
+      ],
+      "title": "Device",
+      "type": "object"
+    },
+    "success": {
+      "is_error": false,
+      "structured_content": {
+        "alias": "synthetic-duplicate",
+        "synthetic": true
+      }
+    },
+    "duplicate": {
+      "is_error": true,
+      "structured_content": {
+        "error": {
+          "code": "DEVICE_ALREADY_REGISTERED",
+          "message": "Synthetic device already registered",
+          "retryable": false,
+          "details": {
+            "alias": "synthetic-duplicate"
+          }
+        }
+      }
+    },
+    "port_closed": true
+  },
+  "mcp_warm_single_sample_cost": {
+    "startup_to_tcp_ready_ms": 191.2,
+    "idle_rss_kib": 68448,
+    "one_cli_list_wall_ms": 272.5,
+    "cli_device_count": 0,
+    "environment_distribution_count": 28,
+    "environment_allocated_kib": 34036,
+    "measurement": "one warm-cache sample; TCP readiness; RSS via macOS ps after 1s idle; fresh Python CLI process; du allocated blocks; synthetic in-memory registry only",
+    "service_exit_code": -15,
+    "port_closed": true
+  },
+  "sqlite_lease_spike": {
+    "python": "3.13.14",
+    "sqlite": "3.53.1",
+    "elapsed_seconds": 0.599,
+    "checks": [
+      {
+        "test": "two_process_race",
+        "trials": 20,
+        "passed": true
+      },
+      {
+        "test": "expire_and_acquire_same_transaction",
+        "passed": true
+      },
+      {
+        "test": "old_and_wrong_token_cannot_change_new_lease",
+        "passed": true
+      },
+      {
+        "test": "release_terminal_retry_is_idempotent",
+        "passed": true
+      },
+      {
+        "test": "injected_failure_rolls_back_expiry_and_insert",
+        "passed": true
+      },
+      {
+        "test": "reopen_database_preserves_absolute_expiry",
+        "passed": true
+      },
+      {
+        "test": "renew_valid_only_and_never_shorten",
+        "passed": true
+      },
+      {
+        "test": "state_directory_singleton_lock",
+        "passed": true
+      }
+    ],
+    "clock": "production wall epoch milliseconds; injected boundary clocks in expiry tests",
+    "source_lines": 238
+  },
+  "not_verified": [
+    "real USB unplug/replug or sleep/wake",
+    "production MileSprint HTTP/SQLite/device integration",
+    "real device lease allocation",
+    "device install/launch/cleanup or doumen tests",
+    "power failure or database corruption"
+  ],
+  "cleanup": {
+    "mcp_temporary_services_stopped": true,
+    "mcp_ports_closed": true,
+    "raw_device_identifiers_published": false,
+    "formal_production_source_added": false
+  }
+}
