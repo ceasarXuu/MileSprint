@@ -11,7 +11,7 @@
 | --- | --- | --- |
 | Device Hub 安装位置/标识 | Xcode 内的 DeviceHub.app，bundle 为 com.apple.dt.Devices | 不实现 Device Hub 窗口适配；使用 Xcode 设备 CLI |
 | 当前工具链 | Xcode 27.1；simctl JSON、devicectl JSON 可读取 | 实现必须针对实际输出建立解析 fixture，不能照搬旧字段 |
-| simctl 设备记录 | 6 台：4 台 runtime 可用且均为 Shutdown；2 台缺少对应 runtime | 关机与不可用分开；不擅自修复/新建 |
+| simctl 的 CoreSimulator 清单 | 6 条记录：4 条 runtime 可用且均为 Shutdown；另 2 条报告 runtime 不可用 | 此计数不包含 USB 真机，也不是 DeviceHub 展示设备的分类结论；具体条目见第 7 节 |
 | devicectl 设备记录 | 同时包含模拟器和真机；1 台 USB 真机 connected，另 2 台真机仅保留配对记录且未连接 | 两个 provider 要去重；不能把每条 devicectl 记录都当独立 USB 真机 |
 | 真机磁盘 | 对当前 USB 真机只读查询 AmountDataAvailable 成功 | 可复用现有轻量采集方式，不需要录制性能轨迹 |
 | JSON schema | devicectl jsonVersion=5，旧 hardwareProperties/deviceProperties/connectionProperties 明示废弃，改用 properties | schema 不兼容应报 provider_error；不解析人类表格作为主要协议 |
@@ -65,7 +65,7 @@ ideviceinfo -u <已核验的USB设备UDID> -q com.apple.disk_usage -k AmountData
 | 项目 | 本轮实测 | 设计影响 |
 | --- | --- | --- |
 | 两台 USB | iPhone 11 Pro Max / iOS 27.2；iPad mini (A17 Pro) / iPadOS 26.6.1，均 wired + connected；idevice_id USB 清单与两台硬件 UDID 对应 | 快速枚举可以与 USB 主源交叉核对，不按名称推断连接 |
-| DeviceHub | Xcode 内 DeviceHub 进程运行；simctl 仍列出 6 台 Shutdown，4 台 runtime 可用、2 台缺 iOS 18.5 runtime | GUI 已打开不表示模拟器已启动；管理器不依赖窗口 |
+| DeviceHub / CoreSimulator 分开观察 | DeviceHub 进程运行；另由 simctl 查询到 6 条 Shutdown 的 CoreSimulator 记录，其中 2 条关联不可用的 iOS 18.5 runtime | DeviceHub 可同时展示真机与模拟器；不能以展示位置判类型，也不能把这两条记录套到 USB 真机 |
 | 标识 | 两台的硬件 UDID 与 CoreDevice identifier 均不同 | typed locators 必须区分，不能向部署脚本传同一通用字符串 |
 | 锁状态 | 两台 passcodeRequired=true、unlockedSinceBoot=true；只读取状态，没有解锁 | 连接、锁状态和具体操作能力独立表达 |
 | 详情查询 | iPad 约 131ms 成功；iPhone 5054ms 返回 exit 2 / info.outcome=timeout；其 lockState 仍成功 | details 按需查询，不进入每轮目录扫描；单项失败不覆盖连接观察 |
@@ -105,3 +105,17 @@ MCP 单次缓存已热的合成成本：TCP 就绪约 191ms，空闲 RSS 约 66.
 - [SDK 错误处理](https://py.sdk.modelcontextprotocol.io/servers/handling-errors/) 与 [固定版返回转换源码](https://github.com/modelcontextprotocol/python-sdk/blob/v2.3.0/src/mcp/server/mcpserver/utilities/func_metadata.py)：结构化结果与业务错误契约已有小样支持。
 - [SQLite 事务](https://www.sqlite.org/lang_transaction.html)、[部分索引](https://www.sqlite.org/partialindex.html)：使用写事务和 held 唯一约束，无需额外锁服务。
 - [Python 时钟](https://docs.python.org/3/library/time.html)、[文件锁](https://docs.python.org/3/library/fcntl.html)：跨重启期限用 UTC 毫秒，同目录单实例用 flock，不删除仍在使用的锁文件。
+
+## 7. 设备分类澄清
+
+用户指出 DeviceHub 中两台 USB 设备是真机。此前摘要把两份清单放在一起叙述，未点名区分，容易误读。只读复核结论：
+
+| 独立对象 | 来源与复核结果 | 分类 |
+| --- | --- | --- |
+| iPhone 11 Pro Max、iPad mini (A17 Pro) | devicectl 的 hardware.reality=physical、transportType=wired；硬件 UDID 与 USB 清单吻合 | 本次目标 USB 真机，两台都不是模拟器，不适用 CoreSimulator runtime 诊断 |
+| iPhone 15 的 iOS 18.5 历史条目 | simctl 返回 runtime profile not found；对应 device.plist 的 deviceType 为 CoreSimulator.SimDeviceType.iPhone-15，runtime 为 iOS-18-5 | 另一条 CoreSimulator 记录，其 ID 不匹配两台 USB 真机 |
+| iPad Air 13-inch (M3) 的 iOS 18.5 历史条目 | simctl 返回同类错误；device.plist 的 deviceType 为 CoreSimulator.SimDeviceType.iPad-Air-13-inch-M3，runtime 为 iOS-18-5 | 另一条 CoreSimulator 记录，其 ID 不匹配两台 USB 真机 |
+
+DeviceHub 是展示/管理入口，不是设备类型。真机的 DDI（developer disk image）支持状态与模拟器 runtime 分开记录，不将真机的开发支持问题标成缺少模拟器 runtime。
+
+本机 `devicectl help device info ddiServices` 还说明默认会检查并更新/挂载 DDI。以后如只读查询该信息必须显式使用 `--no-auto-mount-ddis`；本次仅阅读 help，未执行该查询或挂载。

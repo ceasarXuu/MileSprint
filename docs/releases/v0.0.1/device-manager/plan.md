@@ -107,6 +107,8 @@ SQLite 保存结构化当前状态和少量必要审计，不建设完整 Event 
 
 建议后台每 15 秒枚举一次，磁盘每 60 秒采一次，手动 refresh 合并到已有探测；禁止同设备同类轮询重叠。simctl/USB 枚举/Apple 快速目录本轮均约 5–116ms，支持该方向，但不承诺 SLA。
 
+分类依据是 provider 与 typed identity，不是是否出现在 DeviceHub。两台目标 USB 设备均为 physical；simctl 的 iOS 18.5 runtime 错误来自另外两条 CoreSimulator 历史记录。真机 DDI 状态独立于模拟器 runtime，不套用同一错误，也不自动挂载 DDI。
+
 详情/锁状态按需查询，不能进入每轮快速目录：iPhone connected 时 details 仍在 5 秒截止处 timeout。devicectl 参数 timeout 最低 5 秒，配外层截止；ideviceinfo 不用 -s，校验非空字段，避免 exit 0 的空 plist 被当作资源值。
 
 acquire 若需当前可达性且观察超过 15 秒，先做有界刷新；失败则给出不可判定原因。USB 安装/运行用途拒绝 paired_only/非 wired；关机可用模拟器允许为外部启动取得租约并返回 needs_boot。

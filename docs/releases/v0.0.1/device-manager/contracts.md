@@ -29,6 +29,8 @@
 4. 注册生成不可变内部 UUID，alias 唯一且可由用户/Agent设定；`identity_key` 唯一，避免同一设备以不同 alias 多次注册。
 5. 无法确认类型或标识映射的缓存记录显示 unknown；不按名称猜 ID，不静默替换目标。
 
+DeviceHub 可以同时展示真机和模拟器，不能以它是否展示某设备决定类型。`runtime_unavailable` 只用于 CoreSimulator 来源的 runtime 观察，不用于 USB 真机；真机 DDI 开发支持状态单列，也不自动挂载/修复。
+
 建议 Device 视图字段：
 
 ```json

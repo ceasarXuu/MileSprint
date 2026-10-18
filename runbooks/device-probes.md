@@ -14,6 +14,7 @@ idevice_id -l
 - 清单包含模拟器和缓存真机。模拟器以 simulator UDID 去重，USB 真机以硬件 UDID 对照 idevice_id；不要按名称合并真机和同名模拟器。
 - CoreDevice identifier 与硬件 UDID 不同；对外提供 typed locators，不混成一个 device_id。
 - DeviceHub 进程运行不等于模拟器 Booted；以 simctl 的运行状态和 runtime availability 为准。
+- DeviceHub 也展示 USB 真机。真机以 hardware.reality/USB 身份确认，不因出现在 DeviceHub 而归为模拟器；runtime_unavailable 只描述 CoreSimulator 记录。
 - 本机 devicectl timeout 最小值为 5，传 3 返回参数错误 64，不是设备故障。
 
 ## 按需详情
@@ -24,6 +25,8 @@ xcrun devicectl device info details --device <CoreDevice-ID> --json-output - --o
 ```
 
 details 曾在 USB connected 的设备上 5 秒超时，lockState 仍成功。不要把 details 放入每轮目录扫描；分项记录 info.outcome、耗时与错误，不抹掉其他新鲜观察。
+
+真机的 DDI 开发支持与模拟器 runtime 不同。本机 ddiServices 的 help 说明默认会更新/挂载 DDI；如只读查询必须用 `--no-auto-mount-ddis`，不能直接调用默认选项。此次没有执行挂载。
 
 ## 真机资源
 

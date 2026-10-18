@@ -79,17 +79,6 @@
         }
       }
     ],
-    "simulators": {
-      "total": 6,
-      "runtime_available": 4,
-      "booted": 0,
-      "missing_runtime": 2,
-      "available_runtime_versions": [
-        "17.5",
-        "26.5"
-      ],
-      "shared_data_volume_count": 1
-    },
     "devicehub_process_running": true,
     "directory_latency_samples_ms": {
       "simctl": [
@@ -112,6 +101,33 @@
       "devicectl_timeout_min_seconds": 5,
       "timeout_3_exit_code": 64,
       "ideviceinfo_simple_mode_empty_plist_despite_exit_0": true
+    },
+    "core_simulator_inventory": {
+      "total": 6,
+      "runtime_available": 4,
+      "booted": 0,
+      "missing_runtime": 2,
+      "available_runtime_versions": [
+        "17.5",
+        "26.5"
+      ],
+      "shared_data_volume_count": 1,
+      "source": "xcrun simctl list devices --json; independently confirmed using CoreSimulator device.plist",
+      "includes_physical_usb_devices": false,
+      "runtime_unavailable_records": [
+        {
+          "model": "iPhone 15",
+          "runtime": "iOS 18.5",
+          "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-15",
+          "identity_matches_target_usb": false
+        },
+        {
+          "model": "iPad Air 13-inch (M3)",
+          "runtime": "iOS 18.5",
+          "device_type": "com.apple.CoreSimulator.SimDeviceType.iPad-Air-13-inch-M3",
+          "identity_matches_target_usb": false
+        }
+      ]
     }
   },
   "mcp_transport_spike": {
@@ -315,5 +331,16 @@
     "mcp_ports_closed": true,
     "raw_device_identifiers_published": false,
     "formal_production_source_added": false
+  },
+  "classification_clarification": {
+    "target_usb_models": [
+      "iPhone 11 Pro Max",
+      "iPad mini (A17 Pro)"
+    ],
+    "target_usb_kind": "physical",
+    "devicehub_is_not_a_device_kind": true,
+    "simulator_runtime_errors_do_not_describe_target_usb_devices": true,
+    "physical_ddi_status_is_separate_from_simulator_runtime": true,
+    "verification": "read-only identity join and CoreSimulator device.plist; no DDI mount or device changes"
   }
 }
