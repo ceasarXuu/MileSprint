@@ -1,4 +1,4 @@
-"""Read-only Apple device observations, separated by provider."""
+"""Read-only device observations, separated by provider."""
 import json
 import os
 import plistlib
@@ -7,6 +7,8 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import time
+
+from . import android
 
 
 def command(*args):
@@ -90,7 +92,14 @@ def collect(provider):
 
 def scan():
     providers = {"simctl": simulators, "devicectl": physical, "usb": usb}
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    for source, executable, directory, scan_android in (
+        ("adb", "adb", "platform-tools", android.attached),
+        ("avd", "emulator", "emulator", android.avds),
+    ):
+        tool = android.sdk_tool(executable, directory)
+        if tool:
+            providers[source] = lambda fn=scan_android, tool=tool: fn(tool)
+    with ThreadPoolExecutor(max_workers=len(providers)) as pool:
         pending = {name: pool.submit(collect, provider) for name, provider in providers.items()}
         results = {name: future.result() for name, future in pending.items()}
     physical_rows, _ = results["devicectl"]
@@ -133,15 +142,26 @@ def scan():
             "source": "usb",
         })
     sim_rows, _ = results["simctl"]
-    rows = sim_rows + physical_rows
+    attached = results.get("adb", ([], {}))[0]
+    observed_avds = {row["identity"] for row in attached}
+    configured = results.get("avd", ([], {}))[0]
+    unresolved_emulator = any(row["kind"] == "simulator" and not row["identity"] for row in attached)
+    avds = [{**row, "source": "avd",
+             "reachability": row["reachability"] if results.get("adb", ([], {}))[1].get("status") == "ok"
+                             and not unresolved_emulator else "unknown"}
+            for row in configured if row["identity"] not in observed_avds]
+    rows = sim_rows + physical_rows + [{**row, "source": "adb"} for row in attached] + avds
     for row in rows:
         source = row.get("source") or ("simctl" if row["kind"] == "simulator" else "devicectl")
         row["source"] = source
+        row.setdefault("platform", "ios")
         row["observed_at"] = results[source][1]["observed_at"]
     return rows, {name: value[1] for name, value in results.items()}
 
 
 def resources(row):
+    if row.get("platform") == "android":
+        return android.resources(row)
     source = "statvfs" if row["kind"] == "simulator" else "ideviceinfo"
     free = total = None
     status = "unknown"

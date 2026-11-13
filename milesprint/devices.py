@@ -37,14 +37,21 @@ class Devices:
                 self.unverified.extend({**row, "identity": None, "reachability": "unknown"}
                                        for row in items)
 
+    @staticmethod
+    def resource_locator(row):
+        locators = row["locators"]
+        if row.get("platform") == "android":
+            return (locators.get("adb_serial"), locators.get("adb_transport_id"))
+        return locators.get("usb_udid")
+
     def publish_resources(self, samples):
-        self.metrics = {key: (row["locators"].get("usb_udid"), metrics)
+        self.metrics = {key: (self.resource_locator(row), metrics)
                         for key, row, metrics in samples}
 
     def device_metrics(self, observation):
-        usb_udid, metrics = self.metrics.get(observation["identity"], (None, {}))
-        if observation["kind"] == "physical" and (
-            not observation.get("usb_present") or usb_udid != observation["locators"].get("usb_udid")
+        locator, metrics = self.metrics.get(observation["identity"], (None, {}))
+        if locator != self.resource_locator(observation) or (
+            observation["kind"] == "physical" and not observation.get("usb_present")
         ):
             return {}
         return {key: ({**metric, "status": "stale"} if metric["status"] == "ok" and
@@ -56,9 +63,10 @@ class Devices:
         if current and time() - current["observed_at"] <= max_age:
             return current
         saved = current or json.loads(device["observation"])
-        return {**saved, "reachability": "unknown", "boot_state": None,
+        return {**saved, "platform": saved.get("platform", "ios"), "reachability": "unknown", "boot_state": None,
                 "connection": None, "transport": None, "usb_present": None,
-                "locators": {**saved["locators"], "usb_udid": None}}
+                "locators": {key: value for key, value in saved["locators"].items()
+                             if key not in {"usb_udid", "adb_serial", "adb_transport_id"}}}
 
     def view(self, db, device, at_ms=None):
         observation = self.observation(device)
@@ -72,7 +80,7 @@ class Devices:
                 "default_app_policy": "resettable", "app_overrides": json.loads(device["overrides"]),
                 "revision": device["revision"]}}
 
-    def list(self, kind=None, registered=None):
+    def list(self, kind=None, registered=None, platform=None):
         with self.store.transaction(read_only=True) as db:
             at_ms = now_ms()
             saved = {row["identity"]: row for row in db.execute("SELECT * FROM devices ORDER BY alias")}
@@ -82,7 +90,8 @@ class Devices:
             if registered is not True:
                 rows.extend({**row, "id": None} for row in [*self.rows.values(), *self.unverified]
                             if row["identity"] not in saved)
-            return [row for row in rows if not kind or row["kind"] == kind]
+            return [row for row in rows if (not kind or row["kind"] == kind)
+                    and (not platform or row.get("platform", "ios") == platform)]
 
     def get(self, target):
         with self.store.transaction() as db:

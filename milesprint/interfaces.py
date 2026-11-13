@@ -70,10 +70,11 @@ def build_mcp(devices, token, port, refresh):
 
     @tool
     async def devices_list(kind: Kind | None = None, registered: bool | None = None,
-                           refresh_now: bool = False) -> Output:
+                           refresh_now: bool = False,
+                           platform: Literal["ios", "android"] | None = None) -> Output:
         if refresh_now:
             await refresh()
-        return devices.list(kind, registered)
+        return devices.list(kind, registered, platform)
 
     @tool
     async def device_get(device: str, refresh_now: bool = False, include_details: bool = False) -> Output:

@@ -24,3 +24,7 @@ uv run milesprint call lease_acquire '{"device":"doumen-sim","holder":"agent-1",
 `devices_list` 和 `device_get` 的 `refresh_now` 刷新目录。磁盘采集独立轮询。申请可传 `min_free_bytes`，缺失、过期或不满足下限的磁盘观测均拒绝。真机详情通过 `device_get` 的 `include_details` 请求。
 
 在同一台 Mac 打开 `http://127.0.0.1:8765/` 可查看管理界面。「设备」标签显示设备目录、占用状态、持有者和到期时间。页面可见时每 5 秒检查表格变化，切回页面立即同步，登记、策略变更和租约操作通过 CLI 或 MCP 完成。
+
+Android 设备与 Apple 设备显示在同一个「设备」标签中。CLI 或 MCP 可调用 `devices_list`，传入 `{"platform":"android"}` 筛选。Android SDK 工具可从 PATH、`ANDROID_HOME`、`ANDROID_SDK_ROOT` 或 macOS 默认 SDK 路径找到。
+
+Android 真机通过已连接的 USB ADB 发现，授权和连接由开发者在设备上完成。已配置的 Android Studio AVD 使用 AVD 名称作为身份，运行后附带当前 ADB serial 和 transport ID。无法关联到 AVD 的运行实例仍可见，但不可登记。Android 设备沿用登记、租约和 App 数据策略，策略请求中的 `bundle_id` 填 Android application ID。已启动并可达的设备可采集 `/data` 磁盘空间。

@@ -17,7 +17,7 @@ ASSETS = {
 
 
 def table_rows(devices):
-    return "".join(map(row, devices)) or '<tr><td colspan="9" class="empty">暂无设备</td></tr>'
+    return "".join(map(row, devices)) or '<tr><td colspan="11" class="empty">暂无设备</td></tr>'
 
 
 def etag(rows):
@@ -25,6 +25,7 @@ def etag(rows):
 
 STATUS = {
     "reachable": "可达", "needs_boot": "待启动", "paired_only": "仅配对",
+    "offline": "离线", "unauthorized": "未授权", "booting": "启动中",
     "runtime_unavailable": "运行时不可用", "unknown": "未知",
 }
 
@@ -53,6 +54,8 @@ def row(device):
     return (
         f'<tr><th scope="row">{title}<small>{subtitle}</small></th>'
         + cell("真机" if device["kind"] == "physical" else "模拟器")
+        + cell(device.get("model"))
+        + cell("Android" if device.get("platform") == "android" else "Apple")
         + cell(system)
         + f'<td><span class="dot {status_class}"></span>{status}</td>'
         + cell(usb)
@@ -65,7 +68,7 @@ def row(device):
 
 
 def render(rows):
-    columns = ("设备", "类型", "系统", "状态", "USB", "可用空间", "占用", "持有者", "到期")
+    columns = ("设备", "类型", "型号", "平台", "系统", "状态", "USB", "可用空间", "占用", "持有者", "到期")
     heading = "".join(f'<th scope="col">{label}</th>' for label in columns)
     return f"""<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
