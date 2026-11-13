@@ -41,7 +41,7 @@ class Devices:
     def resource_locator(row):
         locators = row["locators"]
         if row.get("platform") == "android":
-            return (locators.get("adb_serial"), locators.get("adb_transport_id"))
+            return tuple(locators.get(key) for key in ("adb_server_port", "adb_serial", "adb_transport_id"))
         return locators.get("usb_udid")
 
     def publish_resources(self, samples):
@@ -66,7 +66,7 @@ class Devices:
         return {**saved, "platform": saved.get("platform", "ios"), "reachability": "unknown", "boot_state": None,
                 "connection": None, "transport": None, "usb_present": None,
                 "locators": {key: value for key, value in saved["locators"].items()
-                             if key not in {"usb_udid", "adb_serial", "adb_transport_id"}}}
+                             if key not in {"usb_udid", "adb_server_port", "adb_serial", "adb_transport_id"}}}
 
     def view(self, db, device, at_ms=None):
         observation = self.observation(device)

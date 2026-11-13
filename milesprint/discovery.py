@@ -92,13 +92,16 @@ def collect(provider):
 
 def scan():
     providers = {"simctl": simulators, "devicectl": physical, "usb": usb}
-    for source, executable, directory, scan_android in (
-        ("adb", "adb", "platform-tools", android.attached),
-        ("avd", "emulator", "emulator", android.avds),
-    ):
-        tool = android.sdk_tool(executable, directory)
-        if tool:
-            providers[source] = lambda fn=scan_android, tool=tool: fn(tool)
+    adb = android.sdk_tool("adb", "platform-tools")
+    emulator = android.sdk_tool("emulator", "emulator")
+    adb_sources = []
+    if adb:
+        for port in android.adb_ports():
+            source = "adb" if port == 5037 else f"adb:{port}"
+            adb_sources.append(source)
+            providers[source] = lambda port=port: android.attached(adb, port)
+    if emulator:
+        providers["avd"] = lambda: android.avds(emulator)
     with ThreadPoolExecutor(max_workers=len(providers)) as pool:
         pending = {name: pool.submit(collect, provider) for name, provider in providers.items()}
         results = {name: future.result() for name, future in pending.items()}
@@ -142,15 +145,16 @@ def scan():
             "source": "usb",
         })
     sim_rows, _ = results["simctl"]
-    attached = results.get("adb", ([], {}))[0]
+    attached = [{**row, "source": source} for source in adb_sources for row in results[source][0]]
+    adb_complete = bool(adb_sources) and all(results[source][1]["status"] == "ok" for source in adb_sources)
     observed_avds = {row["identity"] for row in attached}
     configured = results.get("avd", ([], {}))[0]
     unresolved_emulator = any(row["kind"] == "simulator" and not row["identity"] for row in attached)
     avds = [{**row, "source": "avd",
-             "reachability": row["reachability"] if results.get("adb", ([], {}))[1].get("status") == "ok"
+             "reachability": row["reachability"] if adb_complete
                              and not unresolved_emulator else "unknown"}
             for row in configured if row["identity"] not in observed_avds]
-    rows = sim_rows + physical_rows + [{**row, "source": "adb"} for row in attached] + avds
+    rows = sim_rows + physical_rows + attached + avds
     for row in rows:
         source = row.get("source") or ("simctl" if row["kind"] == "simulator" else "devicectl")
         row["source"] = source

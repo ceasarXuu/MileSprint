@@ -27,8 +27,16 @@ def avds(tool):
             if re.fullmatch(r"[\w.-]+", name)]
 
 
-def attached(tool):
-    lines = run(tool, "devices", "-l").splitlines()
+def adb_ports():
+    ports = tuple(dict.fromkeys(int(port) for port in os.getenv("MILESPRINT_ADB_PORTS", "5037").split(",")))
+    if not all(1 <= port <= 65535 for port in ports):
+        raise ValueError("MILESPRINT_ADB_PORTS requires valid TCP ports")
+    return ports
+
+
+def attached(tool, port=5037):
+    args = ("-H", "127.0.0.1", "-P", str(port))
+    lines = run(tool, *args, "devices", "-l").splitlines()
     if not lines or lines[0].strip() != "List of devices attached":
         raise ValueError("Unexpected adb device list")
     entries = [line.split() for line in lines[1:] if line.strip()]
@@ -48,13 +56,13 @@ def attached(tool):
         if state == "device" and transport_id.isdecimal():
             if emulator:
                 try:
-                    output = run(tool, "-s", serial, "emu", "avd", "name").splitlines()
+                    output = run(tool, *args, "-s", serial, "emu", "avd", "name").splitlines()
                     if len(output) == 2 and output[1] == "OK" and re.fullmatch(r"[\w.-]+", output[0]):
                         name = output[0]
                 except (OSError, subprocess.SubprocessError):
                     pass
             try:
-                props = run(tool, "-t", transport_id, "shell", "getprop")
+                props = run(tool, *args, "-t", transport_id, "shell", "getprop")
                 properties = dict(re.findall(r"^\[([^\]]+)\]: \[(.*)\]$", props, re.MULTILINE))
                 version = properties.get("ro.build.version.release")
                 booted = properties.get("sys.boot_completed") == "1"
@@ -72,7 +80,7 @@ def attached(tool):
             "reachability": "reachable" if booted else
                             {"device": "booting", "offline": "offline",
                              "unauthorized": "unauthorized"}.get(state, "unknown"),
-            "locators": {"adb_serial": serial, "adb_transport_id": transport_id or None,
+            "locators": {"adb_server_port": port, "adb_serial": serial, "adb_transport_id": transport_id or None,
                          **({"avd_name": name} if name else {})},
         }
 
@@ -87,7 +95,8 @@ def resources(row):
     target = row["locators"].get("adb_transport_id")
     if tool and target and row["reachability"] == "reachable":
         try:
-            output = run(tool, "-t", target, "shell", "df", "-k", "/data").splitlines()
+            output = run(tool, "-H", "127.0.0.1", "-P", str(row["locators"]["adb_server_port"]),
+                         "-t", target, "shell", "df", "-k", "/data").splitlines()
             fields = output[-1].split()
             if fields[-1] != "/data":
                 raise ValueError("Unexpected mount")
