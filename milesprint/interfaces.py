@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse
 
 from . import discovery, leases
+from .dashboard import dashboard
 from .storage import Fault, audit, now_ms
 
 Ceiling = Literal["app_scoped", "device_resettable"]
@@ -139,6 +140,10 @@ def build_mcp(devices, token, port, refresh):
 
     async def authenticate(scope, receive, send):
         if scope["type"] == "http":
+            if scope["path"] in {"/", "/leases", "/dashboard.css"}:
+                response = await dashboard(scope, devices, port)
+                await response(scope, receive, send)
+                return
             supplied = [value for key, value in scope["headers"] if key == b"authorization"]
             if len(supplied) != 1 or not hmac.compare_digest(supplied[0], expected):
                 await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
