@@ -50,27 +50,20 @@ def row(device):
     )
 
 
-def render(devices, occupied):
-    nav = "".join(
-        f'<a href="{url}"{chr(32) + "aria-current=page" if active else ""}>{label}</a>'
-        for url, active, label in (("/", not occupied, "设备"), ("/leases", occupied, "占用"))
-    )
-    records = [device for device in devices
-               if not occupied or device.get("allocation", {}).get("state") == "held"]
+def render(devices):
     columns = ("设备", "类型", "系统", "状态", "USB", "可用空间", "占用", "持有者", "到期")
     heading = "".join(f'<th scope="col">{label}</th>' for label in columns)
-    rows = "".join(row(device) for device in records)
-    empty = "暂无占用中的设备" if occupied else "暂无设备"
+    rows = "".join(row(device) for device in devices)
     return f"""<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="15">
 <title>MileSprint</title><link rel="stylesheet" href="/dashboard.css">
 </head><body><main>
-<nav aria-label="管理界面">{nav}</nav>
+<nav aria-label="管理界面"><a href="/" aria-current="page">设备</a></nav>
 <div class="table-wrap" tabindex="0" aria-label="设备列表"><table>
 <thead><tr>{heading}</tr></thead><tbody>
-{rows or f'<tr><td colspan="9" class="empty">{empty}</td></tr>'}
+{rows or f'<tr><td colspan="9" class="empty">暂无设备</td></tr>'}
 </tbody></table></div></main></body></html>"""
 
 
@@ -95,4 +88,4 @@ async def dashboard(scope, devices, port):
         records = await asyncio.to_thread(devices.list)
     except Fault:
         return PlainTextResponse("暂时无法读取设备，请刷新重试。", status_code=503, headers=security)
-    return HTMLResponse(render(records, scope["path"] == "/leases"), headers=security)
+    return HTMLResponse(render(records), headers=security)
