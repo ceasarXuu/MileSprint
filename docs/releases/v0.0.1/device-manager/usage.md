@@ -23,4 +23,4 @@ uv run milesprint call lease_acquire '{"device":"doumen-sim","holder":"agent-1",
 
 `devices_list` 和 `device_get` 的 `refresh_now` 刷新目录。磁盘采集独立轮询。申请可传 `min_free_bytes`，缺失、过期或不满足下限的磁盘观测均拒绝。真机详情通过 `device_get` 的 `include_details` 请求。
 
-在同一台 Mac 打开 `http://127.0.0.1:8765/` 可查看管理界面。「设备」标签显示设备目录、占用状态、持有者和到期时间。页面每 15 秒刷新，登记、策略变更和租约操作通过 CLI 或 MCP 完成。
+在同一台 Mac 打开 `http://127.0.0.1:8765/` 可查看管理界面。「设备」标签显示设备目录、占用状态、持有者和到期时间。页面可见时每 5 秒检查表格变化，切回页面立即同步，登记、策略变更和租约操作通过 CLI 或 MCP 完成。

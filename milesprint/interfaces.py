@@ -140,7 +140,7 @@ def build_mcp(devices, token, port, refresh):
 
     async def authenticate(scope, receive, send):
         if scope["type"] == "http":
-            if scope["path"] in {"/", "/dashboard.css"}:
+            if scope["path"] in {"/", "/dashboard.css", "/dashboard.js", "/dashboard/rows"}:
                 response = await dashboard(scope, devices, port)
                 await response(scope, receive, send)
                 return

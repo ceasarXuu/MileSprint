@@ -60,11 +60,12 @@ class Devices:
                 "connection": None, "transport": None, "usb_present": None,
                 "locators": {**saved["locators"], "usb_udid": None}}
 
-    def view(self, db, device):
+    def view(self, db, device, at_ms=None):
         observation = self.observation(device)
         metrics = self.device_metrics(observation)
         held = db.execute("""SELECT id, holder, task, expires_at_ms FROM leases
-                            WHERE device_id = ? AND state = 'held'""", (device["id"],)).fetchone()
+                            WHERE device_id = ? AND state = 'held' AND expires_at_ms > ?""",
+                          (device["id"], now_ms() if at_ms is None else at_ms)).fetchone()
         return {**observation, "id": device["id"], "alias": device["alias"],
                 "enabled": bool(device["enabled"]), "metrics": metrics, "allocation": {"state": "held", **dict(held)} if held else
                 {"state": "free"}, "policy": {"device_ceiling": device["ceiling"],
@@ -72,12 +73,12 @@ class Devices:
                 "revision": device["revision"]}}
 
     def list(self, kind=None, registered=None):
-        with self.store.transaction() as db:
-            leases.expire(db, now_ms())
+        with self.store.transaction(read_only=True) as db:
+            at_ms = now_ms()
             saved = {row["identity"]: row for row in db.execute("SELECT * FROM devices ORDER BY alias")}
             rows = []
             if registered is not False:
-                rows.extend(self.view(db, row) for row in saved.values())
+                rows.extend(self.view(db, row, at_ms) for row in saved.values())
             if registered is not True:
                 rows.extend({**row, "id": None} for row in [*self.rows.values(), *self.unverified]
                             if row["identity"] not in saved)

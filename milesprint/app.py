@@ -37,11 +37,16 @@ async def run(devices, token, port):
         await asyncio.shield(scan_job)
 
     async def poll(interval, operation):
+        failed = False
         while True:
             try:
                 await operation()
             except Exception:
-                logging.getLogger("milesprint").exception("Polling failed: %s", operation.__name__)
+                if not failed:
+                    logging.getLogger("milesprint").exception("Polling failed: %s", operation.__name__)
+                failed = True
+            else:
+                failed = False
             await asyncio.sleep(interval)
 
     async def resources():

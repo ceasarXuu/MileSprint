@@ -39,13 +39,15 @@ class Store:
                 event TEXT NOT NULL, subject TEXT, details TEXT NOT NULL)""")
 
     @contextmanager
-    def transaction(self):
+    def transaction(self, *, read_only=False):
         db = None
         try:
             db = sqlite3.connect(self.path, timeout=2)
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA foreign_keys = ON")
-            db.execute("BEGIN IMMEDIATE")
+            if read_only:
+                db.execute("PRAGMA query_only = ON")
+            db.execute("BEGIN" if read_only else "BEGIN IMMEDIATE")
             yield db
             db.commit()
         except sqlite3.Error as exc:

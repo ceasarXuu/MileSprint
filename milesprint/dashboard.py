@@ -1,14 +1,28 @@
 """Local, read-only dashboard for device inventory and current leases."""
 import asyncio
 from datetime import datetime
+from hashlib import sha256
 from html import escape
 from pathlib import Path
 
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, PlainTextResponse, Response
 
 from .storage import Fault
 
-CSS = Path(__file__).with_name("static") / "dashboard.css"
+STATIC = Path(__file__).with_name("static")
+ASSETS = {
+    "/dashboard.css": ("text/css", (STATIC / "dashboard.css").read_bytes()),
+    "/dashboard.js": ("text/javascript", (STATIC / "dashboard.js").read_bytes()),
+}
+
+
+def table_rows(devices):
+    return "".join(map(row, devices)) or '<tr><td colspan="9" class="empty">暂无设备</td></tr>'
+
+
+def etag(rows):
+    return '"' + sha256(rows.encode()).hexdigest() + '"'
+
 STATUS = {
     "reachable": "可达", "needs_boot": "待启动", "paired_only": "仅配对",
     "runtime_unavailable": "运行时不可用", "unknown": "未知",
@@ -50,21 +64,18 @@ def row(device):
     )
 
 
-def render(devices):
+def render(rows):
     columns = ("设备", "类型", "系统", "状态", "USB", "可用空间", "占用", "持有者", "到期")
     heading = "".join(f'<th scope="col">{label}</th>' for label in columns)
-    rows = "".join(row(device) for device in devices)
     return f"""<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="15">
+<script src="/dashboard.js" defer></script>
 <title>MileSprint</title><link rel="stylesheet" href="/dashboard.css">
 </head><body><main>
 <nav aria-label="管理界面"><a href="/" aria-current="page">设备</a></nav>
 <div class="table-wrap" tabindex="0" aria-label="设备列表"><table>
-<thead><tr>{heading}</tr></thead><tbody>
-{rows or f'<tr><td colspan="9" class="empty">暂无设备</td></tr>'}
-</tbody></table></div></main></body></html>"""
+<thead><tr>{heading}</tr></thead><tbody id="devices" data-etag='{etag(rows)}'>{rows}</tbody></table></div><small id="refresh-status" role="status"></small></main></body></html>"""
 
 
 async def dashboard(scope, devices, port):
@@ -79,13 +90,21 @@ async def dashboard(scope, devices, port):
         return PlainTextResponse("Method not allowed", status_code=405, headers={"Allow": "GET, HEAD"})
     security = {
         "Cache-Control": "no-store",
-        "Content-Security-Policy": "default-src 'none'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'",
+        "Content-Security-Policy": "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'",
         "X-Content-Type-Options": "nosniff",
     }
-    if scope["path"] == "/dashboard.css":
-        return PlainTextResponse(CSS.read_text(encoding="utf-8"), media_type="text/css", headers=security)
+    if scope["path"] in ASSETS:
+        media_type, content = ASSETS[scope["path"]]
+        return Response(content, media_type=media_type, headers=security)
     try:
         records = await asyncio.to_thread(devices.list)
     except Fault:
         return PlainTextResponse("暂时无法读取设备，请刷新重试。", status_code=503, headers=security)
-    return HTMLResponse(render(records), headers=security)
+    rows = table_rows(records)
+    if scope["path"] == "/dashboard/rows":
+        tag = etag(rows)
+        security["ETag"] = tag
+        if headers.get(b"if-none-match") == tag.encode():
+            return Response(status_code=304, headers=security)
+        return HTMLResponse(rows, headers=security)
+    return HTMLResponse(render(rows), headers=security)
